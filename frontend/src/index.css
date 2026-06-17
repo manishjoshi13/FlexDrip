@@ -15,7 +15,9 @@
   src: url('../src/assets/fonts/RethinkSans-Regular.woff2') format('opentype');
 
 }
-
+html{
+  scrollbar-gutter:stable;
+}
 
 #root,html,body{
   width: 100%;

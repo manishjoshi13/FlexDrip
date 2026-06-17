@@ -15,21 +15,33 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true,
+        required: function(){
+            return this.googleLogin==false;
+        },
         select:false
     },
     phone:{
         type:Number,
         minlength:10,
         maxlength:10,
-        required:true,
-        unique:true,
+        required:function(){
+            return this.googleLogin==false;
+        },
         trim:true
     },
     role:{
         type:String,
         enum:["buyer","seller"],
         default:"buyer"
+    },
+    googleLogin:{
+        type:Boolean,
+        default:false,
+        select:false
+    },
+    profileCompleted:{
+        type:Boolean,
+        default:false
     }
     
 },{timestamps:true})

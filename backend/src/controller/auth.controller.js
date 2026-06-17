@@ -27,7 +27,8 @@ export const register = asyncHandler(async (req, res) => {
         email,
         password:hashedPassword,
         phone,
-        role
+        role,
+        profileCompleted:true,
     })
 
     // token
@@ -40,14 +41,15 @@ export const register = asyncHandler(async (req, res) => {
         sameSite: "strict",
         maxAge: 7*24 * 60 * 60 * 1000,
     };
+    let userObject=user.toObject();
+    delete userObject.password
 
     res.cookie("token",token);
 
     res.status(201).json({
         success:true,
         message:"User registered successfully",
-        token,
-        user
+        user:userObject
     })
   
 })
@@ -60,11 +62,15 @@ export const login = asyncHandler(async (req, res) => {
         throw new AppError("All fields are required",400);
     }
 
-    const user = await User.findOne({email}).select("+password");
+    const user = await User.findOne({email,role}).select("+password +googleLogin");
     if(!user){
         throw new AppError("User not found",404);
     }
 
+    if(user.googleLogin){
+       
+        throw new AppError("User is registered with google, please login with google",400);
+    }
     const isPasswordValid = await bcrypt.compare(password,user.password);
     if(!isPasswordValid){
         throw new AppError("Invalid password",401);
@@ -79,14 +85,16 @@ export const login = asyncHandler(async (req, res) => {
         sameSite: "strict",
         maxAge: 7*24 * 60 * 60 * 1000,
     };
+    const userObject=user.toObject();
+    delete userObject.password
 
     res.cookie("token",token);
+   
 
     res.status(200).json({
         success:true,
         message:"User logged in successfully",
-        token,
-        user
+        user:userObject
     })
   
 })
@@ -101,19 +109,41 @@ export const logout = asyncHandler(async (req, res) => {
 })
 
 export const getMe = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user.id);
+    
     res.status(200).json({
         success:true,
-        user
+        user:req.user
     })
   
 })
 
-export const verify = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user.id);
-    res.status(200).json({
-        success:true,
-        user
-    })
+
+
+export const googleAuthenticate = asyncHandler(async (req, res) => {
+    
+    let user=await User.findOne({email:req.user.emails[0].value});
+    if(!user){
+        user=await User.create({
+            fullName:req.user.displayName,
+            email:req.user.emails[0].value,
+            role:"buyer",
+            googleLogin:true,
+            
+        })
+    }
+    console.log(user)
+    const token=jwt.sign({id:user._id},config.JWT_SECRET,{expiresIn:config.JWT_EXPIRES_IN});
+
+
+    const options = {
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+        maxAge: 7*24 * 60 * 60 * 1000,
+    };
+
+    res.cookie("token",token);
+
+    res.redirect('http://localhost:5173/')
   
 })

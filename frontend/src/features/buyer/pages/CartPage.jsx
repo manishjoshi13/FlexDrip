@@ -16,7 +16,7 @@ const CartPage = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { cart, isLoading, error, getCart, addCartItem, removeCartItem, clearCart, resetError } = useCart();
-    
+
     const [checkoutSuccess, setCheckoutSuccess] = useState(false);
     const [checkoutError, setCheckoutError] = useState('');
     const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -81,8 +81,8 @@ const CartPage = () => {
                 return;
             }
 
-            // Calculate totals
-            const total = items.reduce((sum, item) => {
+            // Use totals and currency from backend if available, fallback to client-side calculation
+            const total = cart?.total !== undefined ? cart.total : items.reduce((sum, item) => {
                 const product = item.productId || {};
                 let priceVal = product.price?.amount || 0;
                 if (item.variantId && product.variants) {
@@ -110,7 +110,7 @@ const CartPage = () => {
             let pastOrders = [];
             const stored = localStorage.getItem('flexdrip_orders');
             if (stored) {
-                try { pastOrders = JSON.parse(stored); } catch (e) {}
+                try { pastOrders = JSON.parse(stored); } catch (e) { }
             }
 
             // Append and save
@@ -119,7 +119,7 @@ const CartPage = () => {
 
             // Clear Cart in database
             await clearCart();
-            
+
             setCheckoutLoading(false);
             setCheckoutSuccess(true);
         }, 1500);
@@ -127,7 +127,7 @@ const CartPage = () => {
 
     // Calculate subtotal
     const itemsList = cart?.items || [];
-    const subtotal = itemsList.reduce((sum, item) => {
+    const subtotal = cart?.total !== undefined ? cart.total : itemsList.reduce((sum, item) => {
         const product = item.productId || {};
         let priceVal = product.price?.amount || 0;
         if (item.variantId && product.variants) {
@@ -326,7 +326,7 @@ const CartPage = () => {
                         {/* Order Summary Panel */}
                         <div className="lg:col-span-5 bg-white rounded-3xl border border-neutral-100 shadow-[0_8px_30px_rgb(0,0,0,0.02)] p-6 space-y-6">
                             <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider pb-3 border-b border-neutral-50">Summary</h3>
-                            
+
                             {/* Calculation rows */}
                             <div className="space-y-3 text-xs font-semibold text-neutral-500">
                                 <div className="flex justify-between">
@@ -356,7 +356,7 @@ const CartPage = () => {
                                     <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
                                     <div>
                                         Please **complete your profile** details before placing your order.
-                                        <button 
+                                        <button
                                             onClick={() => navigate('/profile')}
                                             className="block underline font-bold mt-1 text-amber-900 uppercase tracking-wide hover:text-black"
                                         >
@@ -383,17 +383,17 @@ const CartPage = () => {
                                 })}
                                 className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 shadow-md cursor-pointer
                                     ${(user?.profileCompleted === false || itemsList.some(item => {
-                                        const prod = item.productId || {};
-                                        let maxStock = 0;
-                                        if (item.variantId && prod.variants) {
-                                            const match = prod.variants.find(v => v._id === item.variantId || v.id === item.variantId);
-                                            if (match) maxStock = match.stock || 0;
-                                        } else {
-                                            maxStock = prod.stock || 0;
-                                        }
-                                        return item.quantity > maxStock;
-                                    })) 
-                                        ? 'bg-neutral-100 border border-neutral-100 text-neutral-400 cursor-not-allowed shadow-none' 
+                                    const prod = item.productId || {};
+                                    let maxStock = 0;
+                                    if (item.variantId && prod.variants) {
+                                        const match = prod.variants.find(v => v._id === item.variantId || v.id === item.variantId);
+                                        if (match) maxStock = match.stock || 0;
+                                    } else {
+                                        maxStock = prod.stock || 0;
+                                    }
+                                    return item.quantity > maxStock;
+                                }))
+                                        ? 'bg-neutral-100 border border-neutral-100 text-neutral-400 cursor-not-allowed shadow-none'
                                         : 'bg-black text-white hover:bg-neutral-900 hover:shadow-neutral-950/15 hover:-translate-y-0.5 active:scale-[0.98]'}`}
                             >
                                 {checkoutLoading ? (

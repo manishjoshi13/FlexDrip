@@ -110,6 +110,7 @@ const OrdersPage = () => {
                                                     .map(([k, val]) => `${k}: ${val}`)
                                                     .join(' / ');
                                             }
+                                        }
                                         let itemImage = product.images && product.images.length > 0 ? product.images[0].url : '';
                                         if (item.variantId && product.variants) {
                                             const match = product.variants.find(v => v._id === item.variantId || v.id === item.variantId);

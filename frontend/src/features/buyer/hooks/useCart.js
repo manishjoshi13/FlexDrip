@@ -10,7 +10,12 @@ export const useCart = () => {
         dispatch(setLoading(true));
         try {
             const response = await getMyCartAPI();
-            dispatch(setCart(response.data || response));
+            const cartData = response.data || response;
+            const normalizedCart = {
+                ...cartData,
+                total: response.total
+            };
+            dispatch(setCart(normalizedCart));
         } catch (error) {
             const errorMsg = error.response?.data?.message || error.message;
             dispatch(setError(errorMsg));

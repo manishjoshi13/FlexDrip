@@ -3,12 +3,29 @@ import { Product } from "../models/product.model.js";
 import { asyncHandler } from "../utils/asyncWrapper.js";
 
 export const getMyCart = asyncHandler(async(req,res)=>{
-    let cart = await Cart.findOne({ user: req.user._id });
+    let cart = await Cart.findOne({user:req.user._id})
+
+
     if (!cart) {
         cart = await Cart.create({ user: req.user._id });
     }
-    await cart.populate("items.productId");
-    res.status(200).json({ success: true, data: cart });
+    let data=await cart.populate("items.productId");
+    let total = 0;
+    for (let i = 0; i < data.items.length; i++) {
+        const item = data.items[i];
+        const product = item.productId;
+        if (product) {
+            let priceVal = product.price?.amount || 0;
+            if (item.variantId && product.variants) {
+                const variant = product.variants.find(v => v._id.toString() === item.variantId.toString());
+                if (variant && variant.price !== undefined && variant.price !== null) {
+                    priceVal = typeof variant.price === 'object' ? (variant.price.amount ?? priceVal) : variant.price;
+                }
+            }
+            total += priceVal * item.quantity;
+        }
+    }
+    res.status(200).json({ success: true, data: data, total: total });
 })
 
 export const createCart = asyncHandler(async(req,res)=>{

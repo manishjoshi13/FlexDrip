@@ -7,6 +7,9 @@ import ProductList from "./features/seller/pages/ProductList";
 import CreateProduct from "./features/seller/pages/CreateProduct";
 import EditProduct from "./features/seller/pages/EditProduct";
 import ProductDetails from "./features/buyer/pages/ProductDetails";
+import Profile from "./features/buyer/pages/Profile";
+import CartPage from "./features/buyer/pages/CartPage";
+import OrdersPage from "./features/buyer/pages/OrdersPage";
 
 export const router = createBrowserRouter([
     {
@@ -27,6 +30,30 @@ export const router = createBrowserRouter([
     {
         path: "/product/:id",
         element: <ProductDetails />
+    },
+    {
+        path: "/profile",
+        element: (
+            <ProtectedRoute>
+                <Profile />
+            </ProtectedRoute>
+        )
+    },
+    {
+        path: "/cart",
+        element: (
+            <ProtectedRoute role="buyer">
+                <CartPage />
+            </ProtectedRoute>
+        )
+    },
+    {
+        path: "/orders",
+        element: (
+            <ProtectedRoute role="buyer">
+                <OrdersPage />
+            </ProtectedRoute>
+        )
     },
     {
         path:"/seller",

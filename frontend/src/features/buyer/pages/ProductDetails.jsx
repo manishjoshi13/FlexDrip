@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useBuyer } from '../hooks/useBuyer';
+import { useAuth } from '../../auth/hooks/useAuth';
+import { useCart } from '../hooks/useCart';
 import Navbar from '../components/Navbar';
-import { ArrowLeft, Loader2, AlertCircle, ShoppingBag, Truck, RotateCcw, ShieldCheck, Tag } from 'lucide-react';
+import { ArrowLeft, AlertCircle, ShoppingBag, Truck, RotateCcw, ShieldCheck, Tag } from 'lucide-react';
 
 const currencySymbols = {
     INR: '₹',
@@ -14,26 +16,164 @@ const currencySymbols = {
 const ProductDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { viewProduct, singleProduct, isLoading, error } = useBuyer();
+    const { viewProduct, fetchSimilarProducts, singleProduct, similarProducts, isLoading, error } = useBuyer();
+    const { user } = useAuth();
+    const { addCartItem, resetError } = useCart();
 
-    const [selectedSize, setSelectedSize] = useState('M');
+    const [selectedOptions, setSelectedOptions] = useState({});
+    const [selectedSize, setSelectedSize] = useState('M'); // Simple fallback sizing
     const [quantity, setQuantity] = useState(1);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [addedToCart, setAddedToCart] = useState(false);
+    const [cartError, setCartError] = useState(null);
 
     useEffect(() => {
         if (id) {
             viewProduct(id);
+            fetchSimilarProducts(id);
         }
+        return () => {
+            resetError();
+        };
     }, [id]);
+
+    // Pre-select first in-stock variant attributes on load
+    useEffect(() => {
+        if (singleProduct) {
+            if (singleProduct.hasVariants && singleProduct.variants?.length > 0) {
+                const activeVar = singleProduct.variants.find(v => v.stock > 0) || singleProduct.variants[0];
+                if (activeVar) {
+                    setSelectedOptions(activeVar.attributes || {});
+                }
+            }
+        }
+    }, [singleProduct]);
+
+    // Helper to dynamically extract options list from flat variants
+    const getOptionsFromVariants = (variantsList) => {
+        if (!variantsList) return [];
+        const optionsMap = {};
+        variantsList.forEach(v => {
+            const attrs = v.attributes || {};
+            const entries = attrs instanceof Map ? Array.from(attrs.entries()) : Object.entries(attrs);
+            entries.forEach(([key, val]) => {
+                if (!optionsMap[key]) {
+                    optionsMap[key] = new Set();
+                }
+                optionsMap[key].add(val);
+            });
+        });
+        return Object.entries(optionsMap).map(([name, set]) => ({
+            name,
+            values: Array.from(set)
+        }));
+    };
+
+    const resolvedOptions = singleProduct && singleProduct.hasVariants
+        ? getOptionsFromVariants(singleProduct.variants)
+        : [];
+
+    // Helper to dynamically extract color specific images from variants
+    const getResolvedColorImages = () => {
+        if (!singleProduct || !singleProduct.variants) return [];
+        const extracted = [];
+        const colorOption = resolvedOptions.find(o => o.name.toLowerCase() === 'color');
+        if (colorOption) {
+            colorOption.values.forEach(color => {
+                const match = singleProduct.variants.find(v => {
+                    const attrs = v.attributes || {};
+                    const entries = attrs instanceof Map ? Array.from(attrs.entries()) : Object.entries(attrs);
+                    const colorEntry = entries.find(([k]) => k.toLowerCase() === 'color');
+                    return colorEntry && colorEntry[1] === color && v.images?.length > 0;
+                });
+                if (match) {
+                    extracted.push({ color, images: match.images });
+                }
+            });
+        }
+        return extracted;
+    };
+
+    const resolvedColorImages = getResolvedColorImages();
+
+    // Resolve dynamic image gallery
+    const getResolvedGallery = () => {
+        if (!singleProduct) return [];
+        let gallery = [];
+        
+        // 1. Try color-specific images
+        if (singleProduct.hasVariants && resolvedColorImages.length > 0) {
+            const colorOptionKey = Object.keys(selectedOptions).find(k => k.toLowerCase() === 'color');
+            const colorVal = colorOptionKey ? selectedOptions[colorOptionKey] : null;
+            if (colorVal) {
+                const colorEntry = resolvedColorImages.find(ci => ci.color.toLowerCase() === colorVal.toLowerCase());
+                if (colorEntry && colorEntry.images?.length > 0) {
+                    gallery = colorEntry.images;
+                }
+            }
+        }
+        
+        // 2. Try variant specific images
+        if (gallery.length === 0 && singleProduct.hasVariants && singleProduct.variants) {
+            const activeVariant = singleProduct.variants.find(v => 
+                Object.entries(selectedOptions).every(([k, val]) => {
+                    const attrs = v.attributes || {};
+                    const attrVal = attrs[k] || (typeof attrs.get === 'function' ? attrs.get(k) : null);
+                    return attrVal === val;
+                })
+            );
+            if (activeVariant && activeVariant.images?.length > 0) {
+                gallery = activeVariant.images;
+            }
+        }
+        
+        // 3. Fallback to product level base images
+        if (gallery.length === 0) {
+            gallery = singleProduct.images || [];
+        }
+        return gallery;
+    };
+
+    const resolvedGallery = getResolvedGallery();
+    const hasImages = resolvedGallery && resolvedGallery.length > 0;
+    const activeImage = hasImages ? resolvedGallery[activeImageIndex]?.url : null;
+
+    // Reset active image index whenever the resolved gallery changes
+    useEffect(() => {
+        setActiveImageIndex(0);
+    }, [resolvedGallery?.length]);
 
     const handleBackClick = () => {
         navigate('/');
     };
 
-    const handleAddToCart = () => {
-        setAddedToCart(true);
-        setTimeout(() => setAddedToCart(false), 3000);
+    const handleAddToCart = async () => {
+        if (!user) {
+            navigate('/login');
+            return;
+        }
+
+        if (user.role === 'seller') {
+            alert('Sellers are not permitted to add products to the shopping bag.');
+            return;
+        }
+
+        setCartError(null);
+
+        const payload = {
+            productId: singleProduct._id || singleProduct.id,
+            variantId: activeVariant?._id || activeVariant?.id || null,
+            quantity: quantity
+        };
+
+        const result = await addCartItem(payload);
+        if (result && result.success) {
+            setAddedToCart(true);
+            setTimeout(() => setAddedToCart(false), 3000);
+        } else {
+            setCartError(result?.error || 'Failed to add item to bag');
+            setTimeout(() => setCartError(null), 5000);
+        }
     };
 
     if (isLoading) {
@@ -57,7 +197,7 @@ const ProductDetails = () => {
         );
     }
 
-    if (error || !singleProduct) {
+    if (!singleProduct) {
         return (
             <div className="min-h-screen bg-[#fafafa] flex flex-col">
                 <Navbar />
@@ -79,18 +219,59 @@ const ProductDetails = () => {
         );
     }
 
-    const { title, description, price, images } = singleProduct;
-    const currencySymbol = currencySymbols[price?.currency] || '₹';
+    const { title, description, price } = singleProduct;
+    const filteredSimilarProducts = (similarProducts || []).filter(
+        (prod) => (prod._id || prod.id) !== (singleProduct?._id || singleProduct?.id)
+    );
+    // Resolve active variant pricing & stock
+    const activeVariant = singleProduct.hasVariants && singleProduct.variants
+        ? singleProduct.variants.find(v => 
+            Object.entries(selectedOptions).every(([k, val]) => {
+                const attrVal = v.attributes[k] || (typeof v.attributes.get === 'function' ? v.attributes.get(k) : null);
+                return attrVal === val;
+            })
+          )
+        : null;
+
+    const currencySymbol = currencySymbols[activeVariant?.price?.currency || price?.currency] || '₹';
     const priceAmount = price?.amount !== undefined ? price.amount : 0;
-    const hasImages = images && images.length > 0;
-    const activeImage = hasImages ? images[activeImageIndex]?.url : null;
+
+    const resolvedPriceAmount = activeVariant?.price !== undefined && activeVariant?.price !== null
+        ? (typeof activeVariant.price === 'object' && activeVariant.price.amount !== undefined ? activeVariant.price.amount : activeVariant.price)
+        : priceAmount;
+
+    const resolvedStock = singleProduct.hasVariants
+        ? (activeVariant ? activeVariant.stock : 0)
+        : (singleProduct.stock !== undefined ? singleProduct.stock : 0);
+
+    const isOutOfStock = resolvedStock === 0;
+
+    // Helper to evaluate availability/stock state of an option value
+    const getOptionValueState = (optionName, optionValue) => {
+        if (!singleProduct.variants) return 'available';
+        
+        // Form a hypothetical attribute selection map
+        const hypSelections = { ...selectedOptions, [optionName]: optionValue };
+        
+        // Find if any variant combination exists for this selection
+        const matches = singleProduct.variants.filter(v => {
+            return Object.entries(hypSelections).every(([key, val]) => {
+                if (!val) return true;
+                const attrVal = v.attributes[key] || (typeof v.attributes.get === 'function' ? v.attributes.get(key) : null);
+                return attrVal === val;
+            });
+        });
+
+        if (matches.length === 0) return 'unavailable'; // Dependent configuration does not exist
+        
+        const hasStock = matches.some(v => v.stock > 0);
+        return hasStock ? 'available' : 'out-of-stock';
+    };
 
     return (
         <div className="min-h-screen bg-[#fafafa] flex flex-col">
-            {/* Navbar */}
             <Navbar />
 
-            {/* Main Area */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow">
                 {/* Back Link */}
                 <button
@@ -103,12 +284,12 @@ const ProductDetails = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                     
-                    {/* Left Panel: Images Gallery (Cols 5) */}
+                    {/* Left Panel: Images Gallery */}
                     <div className="lg:col-span-5 max-h-[36rem] flex flex-col md:flex-row gap-4">
-                        {/* Thumbnail Bar (side-by-side on desktop, bottom on mobile) */}
-                        {hasImages && images.length > 1 && (
+                        {/* Thumbnail Bar */}
+                        {hasImages && resolvedGallery.length > 1 && (
                             <div className="flex flex-row md:flex-col gap-2 order-2 md:order-1 overflow-x-auto md:overflow-x-visible">
-                                {images.map((img, index) => (
+                                {resolvedGallery.map((img, index) => (
                                     <button
                                         key={index}
                                         onClick={() => setActiveImageIndex(index)}
@@ -138,18 +319,23 @@ const ProductDetails = () => {
                         </div>
                     </div>
 
-                    {/* Right Panel: Content & Purchase details (Cols 7) */}
+                    {/* Right Panel: Content & Purchase Details */}
                     <div className="lg:col-span-7 space-y-8 flex flex-col justify-start py-2">
                         {/* Title & Brand */}
                         <div className="space-y-2">
                             <span className="text-xs font-bold tracking-[0.25em] text-gray-400 uppercase">
-                                SNITCH ORIGINALS
+                                FLEXDRIP ORIGINALS
                             </span>
                             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-950">
                                 {title}
                             </h1>
                             <div className="text-xl sm:text-2xl font-bold text-black pt-1">
-                                {currencySymbol}{Number(priceAmount).toLocaleString()}
+                                {currencySymbol}{Number(resolvedPriceAmount).toLocaleString()}
+                                {isOutOfStock && (
+                                    <span className="ml-3 inline-block bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border border-red-100">
+                                        Sold Out
+                                    </span>
+                                )}
                             </div>
                         </div>
 
@@ -161,46 +347,100 @@ const ProductDetails = () => {
                             </p>
                         </div>
 
-                        {/* Sizing selection */}
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-400">
-                                <span>Select Size</span>
-                                <a href="#" className="underline text-gray-500 hover:text-black transition-colors">Size Guide</a>
-                            </div>
-                            <div className="flex flex-wrap gap-2.5">
-                                {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
-                                    <button
-                                        key={size}
-                                        type="button"
-                                        onClick={() => setSelectedSize(size)}
-                                        className={`w-11 h-11 rounded-xl text-xs font-bold border transition-all duration-200 active:scale-95 cursor-pointer hover:-translate-y-0.5 hover:shadow-sm
-                                            ${selectedSize === size 
-                                                ? 'bg-black border-black text-white shadow-md' 
-                                                : 'bg-white border-neutral-200 text-neutral-800 hover:border-black hover:bg-neutral-50'
-                                            }`}
-                                    >
-                                        {size}
-                                    </button>
+                        {/* Dynamic Variant Options Selectors */}
+                        {singleProduct.hasVariants && resolvedOptions && resolvedOptions.length > 0 ? (
+                            <div className="space-y-6">
+                                {resolvedOptions.map((opt) => (
+                                    <div key={opt.name} className="space-y-3">
+                                        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-400">
+                                            <span>Select {opt.name}</span>
+                                            {opt.name.toLowerCase() === 'size' && (
+                                                <a href="#" className="underline text-gray-500 hover:text-black transition-colors">Size Guide</a>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-wrap gap-2.5">
+                                            {opt.values.map((val) => {
+                                                const valState = getOptionValueState(opt.name, val);
+                                                const isSelected = selectedOptions[opt.name] === val;
+                                                
+                                                return (
+                                                    <button
+                                                        key={val}
+                                                        type="button"
+                                                        disabled={valState === 'unavailable'}
+                                                        onClick={() => {
+                                                            setSelectedOptions({
+                                                                ...selectedOptions,
+                                                                [opt.name]: val
+                                                            });
+                                                        }}
+                                                        className={`min-w-11 h-11 px-4 rounded-xl text-xs font-bold border transition-all duration-200 cursor-pointer
+                                                            ${valState === 'unavailable' 
+                                                                ? 'border-neutral-100 bg-neutral-50/50 text-neutral-300 cursor-not-allowed opacity-30 line-through' 
+                                                                : valState === 'out-of-stock' 
+                                                                    ? isSelected
+                                                                        ? 'bg-neutral-100 border-red-500 text-red-500 line-through'
+                                                                        : 'bg-white border-neutral-200 text-neutral-400 border-dashed line-through hover:border-red-400'
+                                                                    : isSelected
+                                                                        ? 'bg-black border-black text-white shadow-md hover:-translate-y-0.5' 
+                                                                        : 'bg-white border-neutral-200 text-neutral-800 hover:border-black hover:bg-neutral-50 hover:-translate-y-0.5'
+                                                            }`}
+                                                        title={valState === 'out-of-stock' ? 'Out of stock' : valState === 'unavailable' ? 'Configuration not available' : ''}
+                                                    >
+                                                        {val}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
-                        </div>
+                        ) : (
+                            /* Simple Product Size Fallback (e.g. for Shirts category if variants are not set up) */
+                            !singleProduct.hasVariants && singleProduct.category === 'SHIRTS' && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-400">
+                                        <span>Select Size</span>
+                                        <a href="#" className="underline text-gray-500 hover:text-black transition-colors">Size Guide</a>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2.5">
+                                        {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+                                            <button
+                                                key={size}
+                                                type="button"
+                                                onClick={() => setSelectedSize(size)}
+                                                className={`w-11 h-11 rounded-xl text-xs font-bold border transition-all duration-200 active:scale-95 cursor-pointer hover:-translate-y-0.5 hover:shadow-sm
+                                                    ${selectedSize === size 
+                                                        ? 'bg-black border-black text-white shadow-md' 
+                                                        : 'bg-white border-neutral-200 text-neutral-800 hover:border-black hover:bg-neutral-50'
+                                                    }`}
+                                            >
+                                                {size}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )
+                        )}
 
-                        {/* Quantity selection */}
+                        {/* Quantity Selection */}
                         <div className="space-y-3">
                             <label className="text-xs font-bold uppercase tracking-wider text-gray-400 block">Quantity</label>
                             <div className="flex items-center border border-neutral-200 rounded-xl w-32 bg-white overflow-hidden shadow-sm">
                                 <button
                                     type="button"
+                                    disabled={isOutOfStock}
                                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                    className="px-3.5 py-2.5 text-xs font-bold text-neutral-500 hover:bg-neutral-100 hover:text-black transition-colors active:scale-95 cursor-pointer"
+                                    className="px-3.5 py-2.5 text-xs font-bold text-neutral-500 hover:bg-neutral-100 hover:text-black transition-colors active:scale-95 cursor-pointer disabled:opacity-50"
                                 >
                                     -
                                 </button>
-                                <span className="flex-grow text-center text-xs font-bold text-neutral-900">{quantity}</span>
+                                <span className="flex-grow text-center text-xs font-bold text-neutral-900">{isOutOfStock ? 0 : quantity}</span>
                                 <button
                                     type="button"
-                                    onClick={() => setQuantity(quantity + 1)}
-                                    className="px-3.5 py-2.5 text-xs font-bold text-neutral-500 hover:bg-neutral-100 hover:text-black transition-colors active:scale-95 cursor-pointer"
+                                    disabled={isOutOfStock}
+                                    onClick={() => setQuantity(Math.min(resolvedStock, quantity + 1))}
+                                    className="px-3.5 py-2.5 text-xs font-bold text-neutral-500 hover:bg-neutral-100 hover:text-black transition-colors active:scale-95 cursor-pointer disabled:opacity-50"
                                 >
                                     +
                                 </button>
@@ -212,19 +452,29 @@ const ProductDetails = () => {
                             <button
                                 type="button"
                                 onClick={handleAddToCart}
-                                className="group w-full flex items-center justify-center gap-2 bg-black text-white py-4 rounded-xl text-sm font-semibold uppercase tracking-wider hover:bg-neutral-900 hover:shadow-lg hover:shadow-neutral-950/15 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 cursor-pointer"
+                                disabled={isOutOfStock}
+                                className={`group w-full flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-semibold uppercase tracking-wider hover:shadow-lg transition-all duration-300 cursor-pointer
+                                    ${isOutOfStock 
+                                        ? 'bg-neutral-200 border border-neutral-200 text-neutral-400 cursor-not-allowed' 
+                                        : 'bg-black text-white hover:bg-neutral-900 hover:shadow-neutral-950/15 hover:-translate-y-0.5 active:scale-[0.98]'
+                                    }`}
                             >
                                 <ShoppingBag className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" />
-                                Add To Bag
+                                {isOutOfStock ? 'Sold Out' : 'Add To Bag'}
                             </button>
                             {addedToCart && (
                                 <div className="p-3.5 bg-green-50 border border-green-100 rounded-xl text-[10px] text-green-700 font-bold text-center animate-in fade-in duration-200">
                                     Product added to bag successfully
                                 </div>
                             )}
+                            {cartError && (
+                                <div className="p-3.5 bg-red-50 border border-red-100 rounded-xl text-[10px] text-red-700 font-bold text-center animate-in fade-in duration-200">
+                                    {cartError}
+                                </div>
+                            )}
                         </div>
 
-                        {/* Assurances Details (Premium Card style) */}
+                        {/* Assurances Details */}
                         <div className="border border-neutral-100 bg-white p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.01)] grid grid-cols-1 gap-4.5 text-xs font-medium text-neutral-500">
                             <div className="flex items-start gap-3">
                                 <Truck className="w-4.5 h-4.5 text-neutral-800 shrink-0 mt-0.5" />
@@ -252,12 +502,60 @@ const ProductDetails = () => {
                     </div>
 
                 </div>
+
+                {/* Similar Products Carousel */}
+                {filteredSimilarProducts.length > 0 && (
+                    <div className="mt-20 border-t border-neutral-200/50 pt-12">
+                        <h3 className="text-xs font-bold tracking-[0.2em] text-neutral-900 uppercase mb-6">
+                            You May Also Like
+                        </h3>
+                        <div className="relative">
+                            <div 
+                                className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory"
+                                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                            >
+                                {filteredSimilarProducts.map((prod) => {
+                                    const prodPrice = prod.price?.amount || 0;
+                                    const prodCurrency = currencySymbols[prod.price?.currency] || '₹';
+                                    const prodImg = prod.images && prod.images.length > 0 ? prod.images[0].url : '';
+
+                                    return (
+                                        <div 
+                                            key={prod._id || prod.id}
+                                            onClick={() => navigate(`/product/${prod._id || prod.id}`)}
+                                            className="w-44 shrink-0 group cursor-pointer snap-start"
+                                        >
+                                            <div className="aspect-[3/4] w-full bg-white rounded-2xl overflow-hidden border border-neutral-100 mb-2.5 relative shadow-sm">
+                                                {prodImg ? (
+                                                    <img 
+                                                        src={prodImg} 
+                                                        alt={prod.title} 
+                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300">
+                                                        <Tag className="w-8 h-8 stroke-[1.25]" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <h4 className="text-[10px] font-bold text-neutral-800 truncate uppercase tracking-wider group-hover:text-black transition-colors">
+                                                {prod.title}
+                                            </h4>
+                                            <span className="text-xs font-bold text-neutral-950 block mt-0.5">
+                                                {prodCurrency}{Number(prodPrice).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
 
-            {/* Footer */}
             <footer className="bg-white border-t border-gray-100 py-8 mt-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-gray-400 font-medium">
-                    © 2026 SNITCH CLOTHING CO. ALL RIGHTS RESERVED.
+                    © 2026 FLEXDRIP CLOTHING CO. ALL RIGHTS RESERVED.
                 </div>
             </footer>
         </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { AlertCircle } from 'lucide-react';
 
 const AuthLayout = ({
-    title = 'SNITCH',
+    title = 'FlexDrip',
     subtitle,
     error,
     children,

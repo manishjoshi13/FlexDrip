@@ -9,6 +9,17 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    category: {
+        type: String,
+        required: true,
+        enum: ['SHIRTS', 'DENIM', 'ACCESSORIES', 'ESSENTIALS'],
+        default: 'ESSENTIALS'
+    },
+    seller: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     price: {
         amount: {
             type: Number,
@@ -21,8 +32,8 @@ const productSchema = new mongoose.Schema({
             default: 'INR'
         }
     },
-    images: {
-        type: [{
+    images: [
+        {
             url: {
                 type: String,
                 required: true
@@ -30,22 +41,48 @@ const productSchema = new mongoose.Schema({
             fileId: {
                 type: String
             }
-        }],
-        required: true
+        }
+    ],
+    hasVariants: {
+        type: Boolean,
+        default: false
     },
-    category: {
-        type: String,
-        required: true,
-        enum: ['SHIRTS', 'DENIM', 'ACCESSORIES', 'ESSENTIALS'],
-        default: 'ESSENTIALS'
+    stock: {
+        type: Number,
+        default: 0 // Stock for simple products
     },
-    
-    
-    seller: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-}
-}, { timestamps: true })
+    variants: [
+        {
+            images: [
+                {
+                    url: {
+                        type: String,
+                        required: true
+                    },
+                    fileId: {
+                        type: String
+                    }
+                }
+            ],
+            stock: {
+                type: Number,
+                default: 0
+            },
+            attributes: {
+                type: Map,
+                of: String
+            },
+            price: {
+                amount: {
+                    type: Number
+                },
+                currency: {
+                    type: String,
+                    enum: ['INR', 'USD', 'EUR', 'GBP']
+                }
+            }
+        }
+    ]
+}, { timestamps: true });
 
 export const Product = mongoose.model("Product", productSchema)

@@ -16,13 +16,21 @@ import {
     Crown, 
     Glasses 
 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
 
 const Home = () => {
     const { fetchProducts, allProducts, isLoading, error } = useBuyer();
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [selectedTab, setSelectedTab] = useState('ALL');
+    const [showProfileAlert, setShowProfileAlert] = useState(false);
+
+    useEffect(() => {
+        if (user && user.profileCompleted === false) {
+            setShowProfileAlert(true);
+        }
+    }, [user]);
 
     useEffect(() => {
         fetchProducts();
@@ -67,6 +75,41 @@ const Home = () => {
 
     return (
         <div className="min-h-screen bg-[#fafaf9] flex flex-col font-sans">
+            {/* Profile Completion Alert Modal */}
+            {showProfileAlert && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white rounded-3xl border border-neutral-100 shadow-2xl p-6 sm:p-8 max-w-md w-full space-y-6 animate-in zoom-in-95 duration-200">
+                        <div className="text-center space-y-3">
+                            <div className="p-3.5 bg-amber-50 border border-amber-100 rounded-full w-14 h-14 flex items-center justify-center mx-auto text-amber-600">
+                                <AlertCircle className="w-7 h-7 stroke-[1.75]" />
+                            </div>
+                            <h3 className="text-base font-bold uppercase tracking-wider text-neutral-950">Complete Your Profile</h3>
+                            <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+                                Welcome to FlexDrip! Please complete your profile (add phone number & confirm account type) to enable checkout and orders.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowProfileAlert(false);
+                                    navigate('/profile');
+                                }}
+                                className="flex-grow bg-black text-white py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-900 transition-colors shadow-md cursor-pointer"
+                            >
+                                Complete Now
+                            </button>
+                            <button
+                                onClick={() => setShowProfileAlert(false)}
+                                className="border border-neutral-200 text-neutral-500 bg-white py-3 px-6 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-50 transition-colors cursor-pointer"
+                            >
+                                Remind Later
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Navbar */}
             <Navbar />
 
@@ -272,8 +315,8 @@ const Home = () => {
             {/* Minimal Brand Footer */}
             <footer className="bg-white py-12">
                 <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center space-y-4">
-                    <h3 className="text-lg font-bold tracking-[0.2em] text-black uppercase">SNITCH</h3>
-                    <p className="text-xs text-neutral-400 font-medium tracking-wider">© 2026 SNITCH CLOTHING CO. ALL RIGHTS RESERVED.</p>
+                    <h3 className="text-lg font-bold tracking-[0.2em] text-black uppercase">FLEXDRIP</h3>
+                    <p className="text-xs text-neutral-400 font-medium tracking-wider">© 2026 FLEXDRIP CLOTHING CO. ALL RIGHTS RESERVED.</p>
                 </div>
             </footer>
         </div>

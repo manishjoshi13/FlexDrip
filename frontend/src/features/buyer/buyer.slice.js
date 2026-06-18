@@ -6,6 +6,7 @@ export const buyerSlice=createSlice({
         allProducts:[],
         singleProduct:null,
         cart:[],
+        similarProducts:[],
         isLoading:false,
         error:null,
         
@@ -20,6 +21,9 @@ export const buyerSlice=createSlice({
         setCart:(state,action)=>{
             state.cart=action.payload;
         },
+        setSimilarProducts:(state,action)=>{
+            state.similarProducts=action.payload;
+        },
         setLoading:(state,action)=>{
             state.isLoading=action.payload;
         },
@@ -28,5 +32,5 @@ export const buyerSlice=createSlice({
         }
     }
 })
-export const {setAllProducts,setSingleProduct,setCart,setLoading,setError}=buyerSlice.actions
+export const {setAllProducts,setSingleProduct,setCart,setSimilarProducts,setLoading,setError}=buyerSlice.actions
 export default buyerSlice.reducer

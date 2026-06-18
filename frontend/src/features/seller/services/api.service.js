@@ -25,3 +25,15 @@ export const deleteProductAPI = async (id) => {
     let response=await api.delete(`/delete/${id}`);
     return response.data;
 }
+export const addVariantAPI = async (productId, data) => {
+    let response = await api.post(`/${productId}/variants`, data);
+    return response.data;
+}
+export const updateVariantAPI = async (productId, variantId, data) => {
+    let response = await api.put(`/${productId}/variants/${variantId}`, data);
+    return response.data;
+}
+export const deleteVariantAPI = async (productId, variantId) => {
+    let response = await api.delete(`/${productId}/variants/${variantId}`);
+    return response.data;
+}

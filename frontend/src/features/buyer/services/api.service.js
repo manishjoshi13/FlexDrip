@@ -13,5 +13,8 @@ export const getSingleProductAPI=async(id)=>{
     let response=await api.get(`/${id}`)
     return response.data
 }
-
+export const getSimilarProductAPI=async(id)=>{
+    let response=await api.get(`/${id}/similar`)
+    return response.data
+}
 

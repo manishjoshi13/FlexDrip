@@ -1,5 +1,5 @@
 import { setLoading, setError, setMyProducts } from "../seller.slice";
-import { createProductAPI, getMyProductsAPI, getProductByIdAPI, updateProductAPI, deleteProductAPI } from "../services/api.service";
+import { createProductAPI, getMyProductsAPI, getProductByIdAPI, updateProductAPI, deleteProductAPI, addVariantAPI, updateVariantAPI, deleteVariantAPI } from "../services/api.service";
 import { useSelector, useDispatch } from "react-redux";
 
 export const useProduct = () => {
@@ -93,6 +93,66 @@ export const useProduct = () => {
         }
     };
 
+    const addVariant = async (productId, data) => {
+        dispatch(setLoading(true));
+        dispatch(setError(null));
+        try {
+            const response = await addVariantAPI(productId, data);
+            const updatedProduct = response?.product;
+            if (updatedProduct) {
+                const currentProducts = Array.isArray(myProducts) ? myProducts : [];
+                dispatch(setMyProducts(currentProducts.map(p => (p._id === productId || p.id === productId) ? updatedProduct : p)));
+            }
+            return { success: true, product: updatedProduct };
+        } catch (err) {
+            const errMsg = err.response?.data?.message || err.message || "Failed to add variant";
+            dispatch(setError(errMsg));
+            return { success: false, error: errMsg };
+        } finally {
+            dispatch(setLoading(false));
+        }
+    };
+
+    const updateVariant = async (productId, variantId, data) => {
+        dispatch(setLoading(true));
+        dispatch(setError(null));
+        try {
+            const response = await updateVariantAPI(productId, variantId, data);
+            const updatedProduct = response?.product;
+            if (updatedProduct) {
+                const currentProducts = Array.isArray(myProducts) ? myProducts : [];
+                dispatch(setMyProducts(currentProducts.map(p => (p._id === productId || p.id === productId) ? updatedProduct : p)));
+            }
+            return { success: true, product: updatedProduct };
+        } catch (err) {
+            const errMsg = err.response?.data?.message || err.message || "Failed to update variant";
+            dispatch(setError(errMsg));
+            return { success: false, error: errMsg };
+        } finally {
+            dispatch(setLoading(false));
+        }
+    };
+
+    const deleteVariant = async (productId, variantId) => {
+        dispatch(setLoading(true));
+        dispatch(setError(null));
+        try {
+            const response = await deleteVariantAPI(productId, variantId);
+            const updatedProduct = response?.product;
+            if (updatedProduct) {
+                const currentProducts = Array.isArray(myProducts) ? myProducts : [];
+                dispatch(setMyProducts(currentProducts.map(p => (p._id === productId || p.id === productId) ? updatedProduct : p)));
+            }
+            return { success: true, product: updatedProduct };
+        } catch (err) {
+            const errMsg = err.response?.data?.message || err.message || "Failed to delete variant";
+            dispatch(setError(errMsg));
+            return { success: false, error: errMsg };
+        } finally {
+            dispatch(setLoading(false));
+        }
+    };
+
     return {
         isLoading,
         error,
@@ -101,7 +161,10 @@ export const useProduct = () => {
         getMyProducts,
         getProductById,
         updateProduct,
-        deleteProduct
+        deleteProduct,
+        addVariant,
+        updateVariant,
+        deleteVariant
     };
 };
 

@@ -5,6 +5,7 @@ import { errorHandler } from "./src/middleware/errorhandler.js";
 import authRouter from "./src/routes/auth.route.js";
 import buyerRouter from "./src/routes/buyer.routes.js";
 import productRouter from "./src/routes/product.routes.js";
+import cartRouter from "./src/routes/cart.routes.js";
 app.listen(config.PORT,()=>{
     console.log(`Server is running on port ${config.PORT}`);
 })
@@ -14,7 +15,7 @@ connectDB()
 app.use('/api/auth',authRouter)
 app.use('/api/product',productRouter)
 app.use('/api/buyer',buyerRouter)
-
+app.use('/api/cart',cartRouter)
 app.use(errorHandler)
 
 export default app;

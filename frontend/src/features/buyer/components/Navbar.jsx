@@ -1,12 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { useCart } from '../../buyer/hooks/useCart';
 import { LogOut, Menu, X, ShoppingBag } from 'lucide-react';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
+    const { cart, getCart } = useCart();
     const navigate = useNavigate();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+
+    useEffect(() => {
+        if (user && user.role === 'buyer') {
+            getCart();
+        }
+    }, [user]);
 
     const handleLogout = async () => {
         await logout();
@@ -21,7 +30,7 @@ const Navbar = () => {
                     {/* Left: Branding Logo */}
                     <div className="flex items-center">
                         <NavLink to="/" className="text-2xl font-bold tracking-[0.2em] text-black hover:opacity-85 transition-opacity uppercase">
-                            SNITCH
+                            FlexDrip
                         </NavLink>
                     </div>
 
@@ -54,25 +63,92 @@ const Navbar = () => {
                     </div>
 
                     {/* Right: User Menu & Actions */}
-                    <div className="hidden md:flex items-center space-x-8">
-                        {user ? (
-                            <div className="flex items-center gap-6">
-                                <div className="flex items-center gap-2 group cursor-pointer">
-                                    <div className="w-8 h-8 rounded-full bg-neutral-900 flex items-center justify-center text-xs font-bold text-white shadow-sm group-hover:scale-105 group-hover:bg-black transition-all duration-300">
-                                        {user.name ? user.name[0].toUpperCase() : 'U'}
-                                    </div>
-                                    <span className="text-xs font-bold text-neutral-900 group-hover:text-black transition-colors">
-                                        Hi, {user.name || 'User'}
+                    <div className="hidden md:flex items-center space-x-6">
+                        {/* Cart icon for buyers */}
+                        {user && user.role === 'buyer' && (
+                            <NavLink 
+                                to="/cart" 
+                                className="relative p-2 text-neutral-500 hover:text-black transition-all duration-200 cursor-pointer"
+                            >
+                                <ShoppingBag className="w-5 h-5 stroke-[1.75]" />
+                                {cart?.items?.length > 0 && (
+                                    <span className="absolute top-1 right-1 bg-black text-white text-[8px] font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center border border-white">
+                                        {cart.items.reduce((sum, item) => sum + item.quantity, 0)}
                                     </span>
-                                </div>
-                                
+                                )}
+                            </NavLink>
+                        )}
+
+                        {user ? (
+                            <div className="relative">
                                 <button
-                                    onClick={handleLogout}
-                                    className="group flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-red-600 transition-colors cursor-pointer"
+                                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                                    className="flex items-center gap-2 group cursor-pointer focus:outline-none"
                                 >
-                                    <LogOut className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform duration-350" />
-                                    Logout
+                                    <div className="w-8 h-8 rounded-full bg-neutral-900 flex items-center justify-center text-xs font-bold text-white shadow-sm group-hover:scale-105 group-hover:bg-black transition-all duration-300">
+                                        {user.fullName ? user.fullName[0].toUpperCase() : 'U'}
+                                    </div>
+                                    <span className="text-xs font-bold text-neutral-900 group-hover:text-black transition-colors capitalize">
+                                        Hi, {user.fullName ? user.fullName.split(' ')[0] : 'User'}
+                                    </span>
                                 </button>
+                                
+                                {dropdownOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
+                                        <div className="absolute right-0 mt-3 w-56 rounded-2xl bg-white border border-neutral-100 shadow-[0_12px_40px_rgba(0,0,0,0.08)] py-3 px-2 z-20 animate-in fade-in slide-in-from-top-2 duration-150">
+                                            <div className="px-3 py-2 border-b border-neutral-50 mb-1.5">
+                                                <p className="text-xs font-bold text-neutral-900 truncate uppercase tracking-wider">{user.fullName}</p>
+                                                <p className="text-[9px] font-semibold text-neutral-400 truncate mt-0.5">{user.email}</p>
+                                            </div>
+                                            <NavLink 
+                                                to="/profile" 
+                                                onClick={() => setDropdownOpen(false)}
+                                                className="flex items-center w-full px-3 py-2 text-[11px] font-bold text-neutral-600 hover:text-black hover:bg-neutral-50 rounded-xl transition-all uppercase tracking-wider"
+                                            >
+                                                My Profile
+                                            </NavLink>
+                                            {user.role === 'buyer' && (
+                                                <>
+                                                    <NavLink 
+                                                        to="/orders" 
+                                                        onClick={() => setDropdownOpen(false)}
+                                                        className="flex items-center w-full px-3 py-2 text-[11px] font-bold text-neutral-600 hover:text-black hover:bg-neutral-50 rounded-xl transition-all uppercase tracking-wider"
+                                                    >
+                                                        My Orders
+                                                    </NavLink>
+                                                    <NavLink 
+                                                        to="/cart" 
+                                                        onClick={() => setDropdownOpen(false)}
+                                                        className="flex items-center w-full px-3 py-2 text-[11px] font-bold text-neutral-600 hover:text-black hover:bg-neutral-50 rounded-xl transition-all uppercase tracking-wider"
+                                                    >
+                                                        My Cart ({cart?.items?.length || 0})
+                                                    </NavLink>
+                                                </>
+                                            )}
+                                            {user.role === 'seller' && (
+                                                <NavLink 
+                                                    to="/seller" 
+                                                    onClick={() => setDropdownOpen(false)}
+                                                    className="flex items-center w-full px-3 py-2 text-[11px] font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50/40 rounded-xl transition-all uppercase tracking-wider"
+                                                >
+                                                    Seller Dashboard
+                                                </NavLink>
+                                            )}
+                                            <div className="border-t border-neutral-50 my-1.5" />
+                                            <button
+                                                onClick={() => {
+                                                    setDropdownOpen(false);
+                                                    handleLogout();
+                                                }}
+                                                className="flex items-center gap-2 w-full px-3 py-2 text-[11px] font-bold text-red-500 hover:bg-red-50/50 rounded-xl transition-all uppercase tracking-wider cursor-pointer"
+                                            >
+                                                <LogOut className="w-3.5 h-3.5" />
+                                                Logout
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         ) : (
                             <div className="flex items-center gap-6">
@@ -93,7 +169,20 @@ const Navbar = () => {
                     </div>
 
                     {/* Mobile menu button */}
-                    <div className="flex items-center md:hidden">
+                    <div className="flex items-center md:hidden gap-4">
+                        {user && user.role === 'buyer' && (
+                            <NavLink 
+                                to="/cart" 
+                                className="relative p-2 text-neutral-500 hover:text-black"
+                            >
+                                <ShoppingBag className="w-5 h-5 stroke-[1.75]" />
+                                {cart?.items?.length > 0 && (
+                                    <span className="absolute top-1 right-1 bg-black text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center border border-white">
+                                        {cart.items.reduce((sum, item) => sum + item.quantity, 0)}
+                                    </span>
+                                )}
+                            </NavLink>
+                        )}
                         <button
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                             className="p-2 rounded-xl text-neutral-500 hover:text-black hover:bg-neutral-50 transition-colors cursor-pointer"
@@ -133,14 +222,50 @@ const Navbar = () => {
                     <div className="pt-4 border-t border-neutral-100 space-y-3">
                         {user ? (
                             <div className="space-y-4">
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 border-b border-neutral-50 pb-3">
                                     <div className="w-9 h-9 rounded-full bg-neutral-900 flex items-center justify-center text-xs font-bold text-white shadow-sm">
-                                        {user.name ? user.name[0].toUpperCase() : 'U'}
+                                        {user.fullName ? user.fullName[0].toUpperCase() : 'U'}
                                     </div>
                                     <div>
-                                        <p className="text-xs font-bold uppercase tracking-wider text-neutral-900">{user.name || 'User'}</p>
+                                        <p className="text-xs font-bold uppercase tracking-wider text-neutral-900">{user.fullName || 'User'}</p>
                                         <p className="text-[10px] text-neutral-400 font-medium">{user.email}</p>
                                     </div>
+                                </div>
+                                <div className="space-y-1 py-1">
+                                    <NavLink 
+                                        to="/profile" 
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="block text-xs font-bold uppercase tracking-wide text-neutral-600 py-2"
+                                    >
+                                        My Profile
+                                    </NavLink>
+                                    {user.role === 'buyer' && (
+                                        <>
+                                            <NavLink 
+                                                to="/orders" 
+                                                onClick={() => setMobileMenuOpen(false)}
+                                                className="block text-xs font-bold uppercase tracking-wide text-neutral-600 py-2"
+                                            >
+                                                My Orders
+                                            </NavLink>
+                                            <NavLink 
+                                                to="/cart" 
+                                                onClick={() => setMobileMenuOpen(false)}
+                                                className="block text-xs font-bold uppercase tracking-wide text-neutral-600 py-2"
+                                            >
+                                                My Cart ({cart?.items?.length || 0})
+                                            </NavLink>
+                                        </>
+                                    )}
+                                    {user.role === 'seller' && (
+                                        <NavLink 
+                                            to="/seller" 
+                                            onClick={() => setMobileMenuOpen(false)}
+                                            className="block text-xs font-bold uppercase tracking-wide text-amber-600 py-2"
+                                        >
+                                            Seller Dashboard
+                                        </NavLink>
+                                    )}
                                 </div>
                                 <button
                                     onClick={() => {

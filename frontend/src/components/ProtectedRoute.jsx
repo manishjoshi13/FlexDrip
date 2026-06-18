@@ -2,9 +2,8 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../features/auth/hooks/useAuth";
 
 
-const ProtectedRoute = ({ children,role='buyer'}) => {
+const ProtectedRoute = ({ children, role }) => {
   const { user, isLoading } = useAuth();
-
 
   if (isLoading) {
     return (
@@ -13,15 +12,15 @@ const ProtectedRoute = ({ children,role='buyer'}) => {
       </div>
     );
   }
-  if(role && user.role !==role && role=='seller'){
-    return <Navigate to="/" replace />;
-  }
-  if(role && user.role !==role && role=='buyer'){
-    return <Navigate to="/seller" replace />;
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
 
-
-  if (!user && !isLoading) return <Navigate to="/login" replace />;
+  if (role && user.role !== role) {
+    if (role === 'seller') return <Navigate to="/" replace />;
+    if (role === 'buyer') return <Navigate to="/seller" replace />;
+  }
 
   return children;
 };

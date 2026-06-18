@@ -4,6 +4,8 @@ import jwt from "jsonwebtoken";
 import { config } from "../config/config.js";
 import { AppError } from "../utils/appError.js";
 import bcrypt from "bcryptjs";
+import { createCart } from "./cart.controller.js";
+import Cart from "../models/cart.model.js";
 
 export const register = asyncHandler(async (req, res) => {
    
@@ -30,6 +32,10 @@ export const register = asyncHandler(async (req, res) => {
         role,
         profileCompleted:true,
     })
+
+    // create cart
+    await createCart(req,res)
+
 
     // token
     const token=jwt.sign({id:user._id},config.JWT_SECRET,{expiresIn:config.JWT_EXPIRES_IN});
@@ -147,3 +153,54 @@ export const googleAuthenticate = asyncHandler(async (req, res) => {
     res.redirect('http://localhost:5173/')
   
 })
+
+export const updateProfile = asyncHandler(async (req, res) => {
+    const { fullName, phone, role } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+        throw new AppError("User not found", 404);
+    }
+
+    if (!fullName || !phone) {
+        throw new AppError("Full name and phone number are required", 400);
+    }
+
+    // Validate phone number format (must be 10 digits)
+    const phoneStr = phone.toString().trim();
+    if (phoneStr.length !== 10 || isNaN(phone)) {
+        throw new AppError("Phone number must be a 10-digit number", 400);
+    }
+
+    // Role validation
+    if (role && !["buyer", "seller"].includes(role)) {
+        throw new AppError("Invalid role specified", 400);
+    }
+
+    // Only allow role changes if profile is not completed yet
+    if (!user.profileCompleted) {
+        if (role) {
+            user.role = role;
+        }
+    }
+
+    user.fullName = fullName;
+    user.phone = Number(phone);
+    user.profileCompleted = true;
+
+    await user.save();
+
+    // If role is buyer, ensure they have a cart
+    if (user.role === "buyer") {
+        const existingCart = await Cart.findOne({ user: user._id });
+        if (!existingCart) {
+            await Cart.create({ user: user._id });
+        }
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Profile updated successfully",
+        user
+    });
+});

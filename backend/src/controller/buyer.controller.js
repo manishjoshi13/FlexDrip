@@ -19,3 +19,17 @@ export const getSinglePRoduct=asyncHandler(async(req,res)=>{
     }
     return res.status(200).json({success:true,product,message:"Product fetched successfully"})
 })
+
+
+export const getSimilarProducts=asyncHandler(async(req,res)=>{
+    const productId=req.params.productId
+    const product=await Product.findById(productId)
+    if (!product) {
+        return res.status(404).json({ success: false, message: "Product not found" });
+    }
+    const similarProducts=await Product.find({
+        category:product.category,
+        _id: { $ne: productId }
+    })
+    return res.status(200).json({success:true,products:similarProducts || [],message:"Products fetched successfully"})
+})

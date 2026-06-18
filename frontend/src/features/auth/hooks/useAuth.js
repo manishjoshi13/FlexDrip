@@ -1,5 +1,5 @@
 import { useDispatch } from "react-redux";
-import { loginAPI, registerAPI, logoutAPI, getMeAPI,  } from "../services/api.service";
+import { loginAPI, registerAPI, logoutAPI, getMeAPI, updateProfileAPI } from "../services/api.service";
 import { setLoading, setError, setUser } from "../auth.slice";
 import { useSelector } from 'react-redux'
 
@@ -74,6 +74,26 @@ export const useAuth = () => {
             dispatch(setLoading(false));
         }
     }
+    const updateProfile = async (data) => {
+        dispatch(setError(null));
+        dispatch(setLoading(true));
+        try {
+            const response = await updateProfileAPI(data);
+            if (response?.success) {
+                dispatch(setUser(response.user));
+                return { success: true };
+            } else {
+                dispatch(setError(response.message));
+                return { success: false, message: response.message };
+            }
+        } catch (error) {
+            const errorMsg = error.response?.data?.errors?.[0]?.message || error.response?.data?.message || error.message;
+            dispatch(setError(errorMsg));
+            return { success: false, message: errorMsg };
+        } finally {
+            dispatch(setLoading(false));
+        }
+    }
    
 
     return {
@@ -84,6 +104,7 @@ export const useAuth = () => {
         register,
         logout,
         getMe,
+        updateProfile
     }
 
 

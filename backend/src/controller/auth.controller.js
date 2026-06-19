@@ -116,8 +116,11 @@ export const getMe = asyncHandler(async (req, res) => {
 
 
 export const googleAuthenticate = asyncHandler(async (req, res) => {
-    
-    let user=await User.findOne({email:req.user.emails[0].value});
+    const frontendUrl = config.FRONTEND_URL || 'http://localhost:5173';
+    let user = await User.findOne({ email: req.user.emails[0].value }).select("+googleLogin");
+    if (user && !user.googleLogin) {
+        return res.redirect(`${frontendUrl}/login?error=not registred with google`);
+    }
     if(!user){
         user=await User.create({
             fullName:req.user.displayName,
@@ -140,7 +143,7 @@ export const googleAuthenticate = asyncHandler(async (req, res) => {
 
     res.cookie("token",token);
 
-    res.redirect('http://localhost:5173/')
+    res.redirect(frontendUrl)
   
 })
 

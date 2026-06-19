@@ -4,6 +4,7 @@ export const buyerSlice = createSlice({
     name: 'buyer',
     initialState: {
         allProducts: [],
+        trendingProducts: [],
         singleProduct: null,
         cart: [],
         similarProducts: [],
@@ -14,6 +15,9 @@ export const buyerSlice = createSlice({
     reducers: {
         setAllProducts: (state, action) => {
             state.allProducts = action.payload;
+        },
+        setTrendingProducts: (state, action) => {
+            state.trendingProducts = action.payload;
         },
         setSingleProduct: (state, action) => {
             state.singleProduct = action.payload;
@@ -32,5 +36,5 @@ export const buyerSlice = createSlice({
         }
     }
 })
-export const { setAllProducts, setSingleProduct, setCart, setSimilarProducts, setLoading, setError } = buyerSlice.actions
+export const { setAllProducts, setTrendingProducts, setSingleProduct, setCart, setSimilarProducts, setLoading, setError } = buyerSlice.actions
 export default buyerSlice.reducer

@@ -13,6 +13,10 @@ export const getSingleProductAPI=async(id)=>{
     let response=await api.get(`/${id}`)
     return response.data
 }
+export const getTrendingProductsAPI=async()=>{
+    let response=await api.get('/trending')
+    return response.data
+}
 export const getSimilarProductAPI=async(id)=>{
     let response=await api.get(`/${id}/similar`)
     return response.data

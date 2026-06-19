@@ -23,7 +23,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
 
 const Home = () => {
-    const { fetchProducts, allProducts, isLoading, error } = useBuyer();
+    const { fetchProducts, fetchTrendingProducts, allProducts, trendingProducts, isLoading, error } = useBuyer();
     const { user } = useAuth();
     const navigate = useNavigate();
     const [selectedTab, setSelectedTab] = useState('ALL');
@@ -37,6 +37,7 @@ const Home = () => {
 
     useEffect(() => {
         fetchProducts();
+        fetchTrendingProducts();
     }, []);
 
     const scrollToCatalog = () => {
@@ -60,12 +61,12 @@ const Home = () => {
     const filteredProducts = allProducts 
         ? allProducts.filter(product => {
             if (selectedTab === 'ALL') return true;
-            if (selectedTab === 'TRENDING') {
-                return product.price?.amount < 1500; // Mock trending (affordable entry pieces)
-            }
+            if (selectedTab === 'TRENDING') return false;
             return product.category === selectedTab;
         })
         : [];
+
+    const displayProducts = selectedTab === 'TRENDING' ? trendingProducts : filteredProducts;
 
     return (
         <div className="min-h-screen bg-[#fafaf9] flex flex-col font-sans select-none antialiased text-neutral-900">
@@ -233,7 +234,7 @@ const Home = () => {
                             </h2>
                         </div>
                         <span className="text-[10px] font-bold text-neutral-450 uppercase tracking-widest">
-                            Showing {filteredProducts.length} Items
+                            Showing {displayProducts.length} Items
                         </span>
                     </div>
 
@@ -265,7 +266,7 @@ const Home = () => {
                                 </div>
                             ))}
                         </div>
-                    ) : filteredProducts.length === 0 ? (
+                    ) : displayProducts.length === 0 ? (
                         <div className="w-full flex flex-col items-center justify-center py-24 text-center border border-neutral-100 bg-white rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.01)]">
                             <div className="p-4 bg-neutral-50 rounded-full text-neutral-400 mb-4">
                                 <Shirt className="w-7 h-7 stroke-[1.25] text-neutral-800" />
@@ -277,7 +278,7 @@ const Home = () => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
-                            {filteredProducts.map((product) => (
+                            {displayProducts.map((product) => (
                                 <BuyerProductCard key={product._id || product.id} product={product} />
                             ))}
                         </div>

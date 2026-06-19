@@ -46,12 +46,7 @@ const Navbar = () => {
                         >
                             Shop All
                         </NavLink>
-                        <a 
-                            href="#" 
-                            className="text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-black transition-all duration-200 py-6 h-full flex items-center relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 hover:after:w-full after:h-[2px] after:bg-black after:transition-all after:duration-300"
-                        >
-                            New Arrivals
-                        </a>
+
                         {user?.role === 'seller' && (
                             <NavLink 
                                 to="/seller" 
@@ -214,9 +209,7 @@ const Navbar = () => {
                         >
                             Shop All
                         </NavLink>
-                        <a href="#" className="block text-xs font-bold uppercase tracking-[0.15em] text-neutral-400 py-3.5 border-b border-neutral-50">
-                            New Arrivals
-                        </a>
+
                         {user?.role === 'seller' && (
                             <NavLink 
                                 to="/seller" 

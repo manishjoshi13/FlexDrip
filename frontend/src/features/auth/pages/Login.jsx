@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { setError } from '../auth.slice';
 import AuthLayout from '../components/AuthLayout';
 import AuthInput from '../components/AuthInput';
 import RoleSelector from '../components/RoleSelector';
@@ -11,6 +13,16 @@ const Login = () => {
     const { user, login, isLoading, error } = useAuth();
     const [formData, setFormData] = useState({ email: '', password: '' });
     const navigate = useNavigate();
+    const dispatch = useDispatch();
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const urlError = params.get('error');
+        if (urlError) {
+            dispatch(setError(urlError));
+            navigate('/login', { replace: true });
+        }
+    }, [navigate, dispatch]);
 
     useEffect(() => {
         if (user) {

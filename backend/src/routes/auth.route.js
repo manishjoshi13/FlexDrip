@@ -28,7 +28,7 @@ router.get('/google',
 );
 
 router.get('/google/callback',
-  passport.authenticate('google', { session: false,failureRedirect:"http://localhost:5173/login" }),googleAuthenticate
+  passport.authenticate('google', { session: false,failureRedirect:"https://flexdrip.vercel.app/login" }),googleAuthenticate
 );
 
 

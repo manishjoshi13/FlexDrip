@@ -11,6 +11,7 @@ import sendEmail from "./services/email.service.js";
 
 
 const app=express();
+app.set('trust proxy', 1);
 app.use(passport.initialize());
 
 
@@ -18,6 +19,7 @@ passport.use(new GoogleStrategy({
   clientID: config.GOOGLE_CLIENT_ID,
   clientSecret: config.GOOGLE_CLIENT_SECRET,
   callbackURL: '/api/auth/google/callback',
+  proxy: true,
 }, (accessToken, refreshToken, profile, done) => {
   return done(null, profile);
 }));

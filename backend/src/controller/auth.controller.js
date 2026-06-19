@@ -78,13 +78,13 @@ export const login = asyncHandler(async (req, res) => {
     const options = {
         httpOnly: true,
         secure: true,
-        sameSite: "strict",
+        sameSite: "none",
         maxAge: 7*24 * 60 * 60 * 1000,
     };
     const userObject=user.toObject();
     delete userObject.password
 
-    res.cookie("token",token);
+    res.cookie("token",token, options);
    
 
     res.status(200).json({
@@ -96,7 +96,11 @@ export const login = asyncHandler(async (req, res) => {
 })
 
 export const logout = asyncHandler(async (req, res) => {
-    res.clearCookie("token");
+    res.clearCookie("token", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none"
+    });
     res.status(200).json({
         success:true,
         message:"User logged out successfully"
@@ -137,11 +141,11 @@ export const googleAuthenticate = asyncHandler(async (req, res) => {
     const options = {
         httpOnly: true,
         secure: true,
-        sameSite: "strict",
+        sameSite: "none",
         maxAge: 7*24 * 60 * 60 * 1000,
     };
 
-    res.cookie("token",token);
+    res.cookie("token",token, options);
 
     res.redirect(frontendUrl)
   

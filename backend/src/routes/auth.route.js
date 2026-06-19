@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { register,login,logout,getMe,googleAuthenticate,updateProfile } from "../controller/auth.controller.js";
+import { register,login,logout,getMe,googleAuthenticate,updateProfile, verifyRegistration, forgotPassword, resetPassword } from "../controller/auth.controller.js";
 import { validateRegister,validateLogin } from "../validator/auth.validator.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 import passport from "passport";
@@ -8,6 +8,12 @@ import passport from "passport";
 const router = Router();
 
 router.post("/register",validateRegister,register)
+
+router.get("/verify-registration", verifyRegistration)
+
+router.post("/forgot-password", forgotPassword)
+
+router.post("/reset-password", resetPassword)
 
 router.post("/login",validateLogin,login)
 

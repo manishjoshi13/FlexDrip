@@ -11,6 +11,7 @@ const CreateProduct = () => {
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [category, setCategory] = useState('ESSENTIALS');
     const [priceAmount, setPriceAmount] = useState('');
     const [priceCurrency, setPriceCurrency] = useState('INR');
     const [images, setImages] = useState([]);
@@ -212,6 +213,7 @@ const CreateProduct = () => {
         const formData = new FormData();
         formData.append('title', title.trim());
         formData.append('description', description.trim());
+        formData.append('category', category);
         formData.append('priceAmount', priceAmount.toString());
         formData.append('priceCurrency', priceCurrency);
 
@@ -380,6 +382,21 @@ const CreateProduct = () => {
                                     <option value="GBP">GBP (£)</option>
                                 </select>
                             </div>
+                        </div>
+
+                        {/* Category */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Product Category</label>
+                            <select
+                                value={category}
+                                onChange={(e) => setCategory(e.target.value)}
+                                className="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 text-sm font-semibold outline-none focus:border-gray-350 cursor-pointer"
+                            >
+                                <option value="ESSENTIALS">ESSENTIALS</option>
+                                <option value="SHIRTS">SHIRTS</option>
+                                <option value="DENIM">DENIM</option>
+                                <option value="ACCESSORIES">ACCESSORIES</option>
+                            </select>
                         </div>
 
                         {/* Image Upload Zone */}

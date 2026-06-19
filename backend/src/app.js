@@ -5,6 +5,10 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 import {Strategy as GoogleStrategy} from "passport-google-oauth20";
+import sendEmail from "./services/email.service.js";
+
+
+
 
 
 const app=express();

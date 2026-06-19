@@ -24,9 +24,9 @@ const Login = () => {
     };
 
     const forgotPasswordLink = (
-        <a href="#" className="text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors">
+        <NavLink to="/forgot-password" className="text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors">
             Forgot password?
-        </a>
+        </NavLink>
     );
 
     const footerElement = (

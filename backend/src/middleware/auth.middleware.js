@@ -33,3 +33,19 @@ export const buyerAuth=asyncHandler(async(req,res,next)=>{
         throw new AppError("Only buyer can buy product",403);
     next();
 })
+
+export const optionalAuthenticate = async (req, res, next) => {
+    try {
+        const token = req.cookies.token;
+        if (token) {
+            const decodedToken = jwt.verify(token, config.JWT_SECRET);
+            const user = await User.findById(decodedToken.id);
+            if (user) {
+                req.user = user;
+            }
+        }
+    } catch (err) {
+        // Ignore validation errors to keep guests anonymous
+    }
+    next();
+};

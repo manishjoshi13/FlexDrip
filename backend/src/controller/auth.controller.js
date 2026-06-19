@@ -6,58 +6,48 @@ import { AppError } from "../utils/appError.js";
 import bcrypt from "bcryptjs";
 import { createCart } from "./cart.controller.js";
 import Cart from "../models/cart.model.js";
+import sendEmail from "../services/email.service.js";
+import { getVerifyAccountHTML, getSuccessHTML, getErrorHTML } from "../html/verifyAccount.js";
+import { getAccountRegisteredHTML } from "../html/accountRegistered.js";
+import { getSellerWelcomeHTML } from "../html/sellerWelcome.js";
+import { getChangePasswordHTML } from "../html/changePassword.js";
 
 export const register = asyncHandler(async (req, res) => {
-   
-    const {fullName,email,password,phone,role} = req.body;
+    const { fullName, email, password, phone, role } = req.body;
 
-    if(!fullName || !email || !password || !phone || !role){
-        throw new AppError("All fields are required",400);
+    if (!fullName || !email || !password || !phone || !role) {
+        throw new AppError("All fields are required", 400);
     }
     
-    const checkUser = await User.findOne({$or:[{email},{phone}]});
-    if(checkUser){
-        throw new AppError("User already exists",400);
+    const checkUser = await User.findOne(email);
+    if (checkUser) {
+        throw new AppError("User with this email or phone already exists", 400);
     }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Generate verification token with 15 minutes expiration
+    const verificationToken = jwt.sign(
+        { fullName, email, password: hashedPassword, phone, role },
+        config.JWT_SECRET,
+        { expiresIn: '15m' }
+    );
+
+    // Send verification email
+    const frontendUrl = config.FRONTEND_URL || 'http://localhost:5173';
+    const emailHtml = getVerifyAccountHTML(fullName, verificationToken, frontendUrl);
     
+    await sendEmail(
+        email, 
+        "Verify Your FlexDrip Account", 
+        "Verify your account by clicking the link.", 
+        emailHtml
+    );
 
-    const hashedPassword = await bcrypt.hash(password,10);
-
-    // user create
-    const user = await User.create({
-        fullName,
-        email,
-        password:hashedPassword,
-        phone,
-        role,
-        profileCompleted:true,
-    })
-
-    // create cart
-    await createCart(req,res)
-
-
-    // token
-    const token=jwt.sign({id:user._id},config.JWT_SECRET,{expiresIn:config.JWT_EXPIRES_IN});
-    
-    // cookie
-    const options = {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-        maxAge: 7*24 * 60 * 60 * 1000,
-    };
-    let userObject=user.toObject();
-    delete userObject.password
-
-    res.cookie("token",token);
-
-    res.status(201).json({
-        success:true,
-        message:"User registered successfully",
-        user:userObject
-    })
-  
+    res.status(200).json({
+        success: true,
+        message: "Verification email has been sent to your inbox. The link will be active for 15 minutes."
+    });
 })
 
 
@@ -204,3 +194,143 @@ export const updateProfile = asyncHandler(async (req, res) => {
         user
     });
 });
+
+export const verifyRegistration = asyncHandler(async (req, res) => {
+    const { token } = req.query;
+
+    if (!token) {
+        return res.send(getErrorHTML("Verification token is missing."));
+    }
+
+    try {
+        const decoded = jwt.verify(token, config.JWT_SECRET);
+        const { fullName, email, password, phone, role } = decoded;
+
+        // Double check if user already exists
+        const checkUser = await User.findOne({ $or: [{ email }, { phone }] });
+        if (checkUser) {
+            return res.send(getErrorHTML("User with this email or phone is already registered."));
+        }
+
+        // Create the user in the database
+        const user = await User.create({
+            fullName,
+            email,
+            password, // already hashed
+            phone,
+            role,
+            profileCompleted: true
+        });
+
+        // Initialize cart if user is a buyer
+        if (user.role === "buyer") {
+            const existingCart = await Cart.findOne({ user: user._id });
+            if (!existingCart) {
+                await Cart.create({ user: user._id });
+            }
+        }
+
+        // Send welcome email
+        const frontendUrl = config.FRONTEND_URL || 'http://localhost:5173';
+        if (user.role === 'seller') {
+            const welcomeHtml = getSellerWelcomeHTML(user.fullName, frontendUrl);
+            await sendEmail(
+                user.email,
+                "Welcome to the FlexDrip Seller Network",
+                "Your store is ready to set up on FlexDrip!",
+                welcomeHtml
+            );
+        } else {
+            const welcomeHtml = getAccountRegisteredHTML(user.fullName, frontendUrl);
+            await sendEmail(
+                user.email,
+                "Welcome to FlexDrip",
+                "Your account has been registered successfully!",
+                welcomeHtml
+            );
+        }
+
+        return res.send(getSuccessHTML());
+    } catch (error) {
+        console.error("Verification error:", error);
+        return res.send(getErrorHTML("Verification link has expired or is invalid."));
+    }
+});
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        throw new AppError("Email is required", 400);
+    }
+
+    const user = await User.findOne({ email }).select("+googleLogin");
+    if (!user) {
+        throw new AppError("User not found with this email", 404);
+    }
+
+    if (user.googleLogin) {
+        throw new AppError("This account is registered with Google. Please sign in via Google.", 400);
+    }
+
+    // Generate reset token with 15 minutes expiration
+    const resetToken = jwt.sign(
+        { id: user._id },
+        config.JWT_SECRET,
+        { expiresIn: '15m' }
+    );
+
+    const frontendUrl = config.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+    const emailHtml = getChangePasswordHTML(user.fullName, resetUrl);
+
+    await sendEmail(
+        user.email,
+        "Reset Your FlexDrip Password",
+        `Reset your password using this link: ${resetUrl}`,
+        emailHtml
+    );
+
+    res.status(200).json({
+        success: true,
+        message: "Password reset link has been sent to your email. The link is active for 15 minutes."
+    });
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+        throw new AppError("Token and new password are required", 400);
+    }
+
+    // Validate newPassword rules (min length 8, uppercase, lowercase, numeric)
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+    if (newPassword.length < 8 || !passwordRegex.test(newPassword)) {
+        throw new AppError("Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number", 400);
+    }
+
+    try {
+        const decoded = jwt.verify(token, config.JWT_SECRET);
+        const userId = decoded.id;
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        
+        const user = await User.findById(userId);
+        if (!user) {
+            throw new AppError("User not found or invalid token", 404);
+        }
+
+        user.password = hashedPassword;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Password has been reset successfully."
+        });
+    } catch (error) {
+        console.error("Password reset error:", error);
+        throw new AppError("Password reset token is invalid or has expired", 400);
+    }
+});
+

@@ -127,13 +127,22 @@ const Navbar = () => {
                                                 </>
                                             )}
                                             {user.role === 'seller' && (
-                                                <NavLink 
-                                                    to="/seller" 
-                                                    onClick={() => setDropdownOpen(false)}
-                                                    className="flex items-center w-full px-3 py-2 text-[11px] font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50/40 rounded-xl transition-all uppercase tracking-wider"
-                                                >
-                                                    Seller Dashboard
-                                                </NavLink>
+                                                <>
+                                                    <NavLink 
+                                                        to="/seller" 
+                                                        onClick={() => setDropdownOpen(false)}
+                                                        className="flex items-center w-full px-3 py-2 text-[11px] font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50/40 rounded-xl transition-all uppercase tracking-wider"
+                                                    >
+                                                        My Catalog
+                                                    </NavLink>
+                                                    <NavLink 
+                                                        to="/seller/orders" 
+                                                        onClick={() => setDropdownOpen(false)}
+                                                        className="flex items-center w-full px-3 py-2 text-[11px] font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50/40 rounded-xl transition-all uppercase tracking-wider"
+                                                    >
+                                                        Received Orders
+                                                    </NavLink>
+                                                </>
                                             )}
                                             <div className="border-t border-neutral-50 my-1.5" />
                                             <button
@@ -258,13 +267,22 @@ const Navbar = () => {
                                         </>
                                     )}
                                     {user.role === 'seller' && (
-                                        <NavLink 
-                                            to="/seller" 
-                                            onClick={() => setMobileMenuOpen(false)}
-                                            className="block text-xs font-bold uppercase tracking-wide text-amber-600 py-2"
-                                        >
-                                            Seller Dashboard
-                                        </NavLink>
+                                        <>
+                                            <NavLink 
+                                                to="/seller" 
+                                                onClick={() => setMobileMenuOpen(false)}
+                                                className="block text-xs font-bold uppercase tracking-wide text-amber-600 py-2"
+                                            >
+                                                My Catalog
+                                            </NavLink>
+                                            <NavLink 
+                                                to="/seller/orders" 
+                                                onClick={() => setMobileMenuOpen(false)}
+                                                className="block text-xs font-bold uppercase tracking-wide text-amber-600 py-2"
+                                            >
+                                                Received Orders
+                                            </NavLink>
+                                        </>
                                     )}
                                 </div>
                                 <button

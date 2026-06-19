@@ -14,9 +14,7 @@ let orderSchema=new mongoose.Schema({
                 required:true
             },
             variantId:{
-                type:mongoose.Schema.Types.ObjectId,
-                ref:'Variant',
-                required:true
+                type:mongoose.Schema.Types.ObjectId
             },
             quantity:{
                 type:Number,
@@ -34,14 +32,19 @@ let orderSchema=new mongoose.Schema({
     },
     paymentId:{
         type:String,
-        required:true
+        default: 'cash_on_delivery'
+    },
+    shippingAddress: {
+        addressLine: { type: String, required: true },
+        city: { type: String, required: true },
+        state: { type: String, required: true },
+        postalCode: { type: String, required: true }
     },
     status:{
         type:String,
         enum:['pending','paid','shipped','delivered','cancelled'],
         default:'pending'
     }
-    
-})
+}, { timestamps: true })
 
 export const Order=mongoose.model("Order",orderSchema)

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { useOrder } from '../hooks/useOrder';
 import Navbar from '../components/Navbar';
 import { ShoppingBag, Trash2, ArrowRight, Loader2, Minus, Plus, AlertCircle, CheckCircle, Tag, ArrowLeft } from 'lucide-react';
 
@@ -17,9 +18,18 @@ const CartPage = () => {
     const { user } = useAuth();
     const { cart, isLoading, error, getCart, addCartItem, removeCartItem, clearCart, resetError } = useCart();
 
+    const { createOrder } = useOrder();
+
     const [checkoutSuccess, setCheckoutSuccess] = useState(false);
     const [checkoutError, setCheckoutError] = useState('');
     const [checkoutLoading, setCheckoutLoading] = useState(false);
+    const [showAddressModal, setShowAddressModal] = useState(false);
+    const [addressForm, setAddressForm] = useState({
+        addressLine: '',
+        city: '',
+        state: '',
+        postalCode: ''
+    });
 
     useEffect(() => {
         if (user) {
@@ -39,7 +49,7 @@ const CartPage = () => {
         await removeCartItem({ productId, variantId });
     };
 
-    const handleCheckout = async () => {
+    const handleCheckoutClick = () => {
         setCheckoutError('');
         if (!user) {
             navigate('/login');
@@ -71,58 +81,29 @@ const CartPage = () => {
             return;
         }
 
+        setShowAddressModal(true);
+    };
+
+    const handlePlaceOrderSubmit = async (e) => {
+        e.preventDefault();
+        setCheckoutError('');
+
+        if (!addressForm.addressLine || !addressForm.city || !addressForm.state || !addressForm.postalCode) {
+            setCheckoutError('Complete address details are required.');
+            return;
+        }
+
         setCheckoutLoading(true);
+        const res = await createOrder({ shippingAddress: addressForm });
+        setCheckoutLoading(false);
 
-        // Simulate API latency
-        setTimeout(async () => {
-            if (items.length === 0) {
-                setCheckoutError('Your cart is empty');
-                setCheckoutLoading(false);
-                return;
-            }
-
-            // Use totals and currency from backend if available, fallback to client-side calculation
-            const total = cart?.total !== undefined ? cart.total : items.reduce((sum, item) => {
-                const product = item.productId || {};
-                let priceVal = product.price?.amount || 0;
-                if (item.variantId && product.variants) {
-                    const match = product.variants.find(v => v._id === item.variantId || v.id === item.variantId);
-                    if (match && match.price !== undefined && match.price !== null) {
-                        priceVal = typeof match.price === 'object' ? (match.price.amount ?? priceVal) : match.price;
-                    }
-                }
-                return sum + (priceVal * item.quantity);
-            }, 0);
-
-            const currency = items[0]?.productId?.price?.currency || 'INR';
-
-            // Construct new simulated order object
-            const newOrder = {
-                id: Math.floor(100000 + Math.random() * 900000).toString(),
-                date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-                status: 'Dispatched',
-                items: items,
-                totalAmount: total,
-                currency: currency
-            };
-
-            // Read past orders
-            let pastOrders = [];
-            const stored = localStorage.getItem('flexdrip_orders');
-            if (stored) {
-                try { pastOrders = JSON.parse(stored); } catch (e) { }
-            }
-
-            // Append and save
-            pastOrders.unshift(newOrder);
-            localStorage.setItem('flexdrip_orders', JSON.stringify(pastOrders));
-
-            // Clear Cart in database
+        if (res && res.success) {
             await clearCart();
-
-            setCheckoutLoading(false);
             setCheckoutSuccess(true);
-        }, 1500);
+            setShowAddressModal(false);
+        } else {
+            setCheckoutError(res?.error || 'Failed to place your order.');
+        }
     };
 
     // Calculate subtotal
@@ -369,7 +350,7 @@ const CartPage = () => {
                             {/* Checkout Button */}
                             <button
                                 type="button"
-                                onClick={handleCheckout}
+                                onClick={handleCheckoutClick}
                                 disabled={checkoutLoading || user?.profileCompleted === false || itemsList.some(item => {
                                     const prod = item.productId || {};
                                     let maxStock = 0;
@@ -412,6 +393,100 @@ const CartPage = () => {
                     </div>
                 )}
             </main>
+
+            {showAddressModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white rounded-3xl border border-neutral-100 shadow-2xl p-6 sm:p-8 max-w-md w-full space-y-6 animate-in zoom-in-95 duration-200">
+                        <div className="text-center space-y-2">
+                            <h3 className="text-lg font-bold uppercase tracking-wider text-neutral-950">Delivery Address</h3>
+                            <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+                                Enter your shipping details to complete the order.
+                            </p>
+                        </div>
+
+                        <form onSubmit={handlePlaceOrderSubmit} className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block mb-1.5">Street Address</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={addressForm.addressLine}
+                                    onChange={(e) => setAddressForm({ ...addressForm, addressLine: e.target.value })}
+                                    placeholder="Flat / House no, Apartment, Street"
+                                    className="w-full px-4 py-3 rounded-xl border border-neutral-200 text-xs font-medium focus:outline-none focus:border-black transition-colors bg-neutral-50/50"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-450 block mb-1.5">City</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={addressForm.city}
+                                        onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+                                        placeholder="City"
+                                        className="w-full px-4 py-3 rounded-xl border border-neutral-200 text-xs font-medium focus:outline-none focus:border-black transition-colors bg-neutral-50/50"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-450 block mb-1.5">State</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={addressForm.state}
+                                        onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
+                                        placeholder="State"
+                                        className="w-full px-4 py-3 rounded-xl border border-neutral-200 text-xs font-medium focus:outline-none focus:border-black transition-colors bg-neutral-50/50"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-450 block mb-1.5">Postal Code</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={addressForm.postalCode}
+                                    onChange={(e) => setAddressForm({ ...addressForm, postalCode: e.target.value })}
+                                    placeholder="PIN / ZIP code"
+                                    className="w-full px-4 py-3 rounded-xl border border-neutral-200 text-xs font-medium focus:outline-none focus:border-black transition-colors bg-neutral-50/50"
+                                />
+                            </div>
+
+                            {checkoutError && (
+                                <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-[10px] text-red-600 font-bold text-center">
+                                    {checkoutError}
+                                </div>
+                            )}
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddressModal(false)}
+                                    className="flex-1 border border-neutral-200 text-neutral-700 bg-white py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-50 transition-colors cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={checkoutLoading}
+                                    className="flex-1 bg-black text-white py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-neutral-900 transition-colors shadow-md cursor-pointer flex items-center justify-center gap-2"
+                                >
+                                    {checkoutLoading ? (
+                                        <>
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            Placing...
+                                        </>
+                                    ) : (
+                                        'Place Order'
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

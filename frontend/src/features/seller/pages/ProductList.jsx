@@ -92,6 +92,47 @@ const ProductList = () => {
                     </button>
                 </div>
 
+                {/* Sub-Navigation Tabs */}
+                <div className="flex border-b border-neutral-200 mb-8">
+                    <NavLink
+                        to="/seller"
+                        end
+                        className={({ isActive }) =>
+                            `px-6 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
+                                isActive
+                                    ? 'border-black text-black'
+                                    : 'border-transparent text-neutral-400 hover:text-black'
+                            }`
+                        }
+                    >
+                        Products Catalog
+                    </NavLink>
+                    <NavLink
+                        to="/seller/orders"
+                        className={({ isActive }) =>
+                            `px-6 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
+                                isActive
+                                    ? 'border-black text-black'
+                                    : 'border-transparent text-neutral-400 hover:text-black'
+                            }`
+                        }
+                    >
+                        Received Orders
+                    </NavLink>
+                    <NavLink
+                        to="/seller/tickets"
+                        className={({ isActive }) =>
+                            `px-6 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
+                                isActive
+                                    ? 'border-black text-black'
+                                    : 'border-transparent text-neutral-400 hover:text-black'
+                            }`
+                        }
+                    >
+                        Support Tickets
+                    </NavLink>
+                </div>
+
                 {/* Metrics Dashboard Cards */}
                 {!isLoading && myProducts && myProducts.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">

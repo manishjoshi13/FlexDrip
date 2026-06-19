@@ -1,6 +1,8 @@
 import {createBrowserRouter} from "react-router-dom";
 import  Register  from "./features/auth/pages/Register";
 import Login from "./features/auth/pages/Login";
+import ForgotPassword from "./features/auth/pages/ForgotPassword";
+import ResetPassword from "./features/auth/pages/ResetPassword";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import ProductList from "./features/seller/pages/ProductList";
@@ -10,6 +12,8 @@ import ProductDetails from "./features/buyer/pages/ProductDetails";
 import Profile from "./features/buyer/pages/Profile";
 import CartPage from "./features/buyer/pages/CartPage";
 import OrdersPage from "./features/buyer/pages/OrdersPage";
+import SellerOrders from "./features/seller/pages/SellerOrders";
+import SellerTickets from "./features/seller/pages/SellerTickets";
 
 export const router = createBrowserRouter([
     {
@@ -26,6 +30,14 @@ export const router = createBrowserRouter([
     {
         path:"/register",
         element:<Register/>
+    },
+    {
+        path:"/forgot-password",
+        element:<ForgotPassword/>
+    },
+    {
+        path:"/reset-password",
+        element:<ResetPassword/>
     },
     {
         path: "/product/:id",
@@ -63,6 +75,22 @@ export const router = createBrowserRouter([
                 element:(
                 <ProtectedRoute role="seller">
                     <ProductList/>
+                </ProtectedRoute>
+            )
+        },
+        {
+            path:'orders',
+            element:(
+                <ProtectedRoute role="seller">
+                    <SellerOrders/>
+                </ProtectedRoute>
+            )
+        },
+        {
+            path:'tickets',
+            element:(
+                <ProtectedRoute role="seller">
+                    <SellerTickets/>
                 </ProtectedRoute>
             )
         },

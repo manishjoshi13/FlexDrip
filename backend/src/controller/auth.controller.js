@@ -19,7 +19,7 @@ export const register = asyncHandler(async (req, res) => {
         throw new AppError("All fields are required", 400);
     }
     
-    const checkUser = await User.findOne(email);
+    const checkUser = await User.findOne({ email });
     if (checkUser) {
         throw new AppError("User with this email or phone already exists", 400);
     }
@@ -75,10 +75,11 @@ export const login = asyncHandler(async (req, res) => {
     const token=jwt.sign({id:user._id},config.JWT_SECRET,{expiresIn:config.JWT_EXPIRES_IN});
 
         // cookie
+    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     const options = {
         httpOnly: true,
-        secure: true,
-        sameSite: "none",
+        secure: isSecure,
+        sameSite: isSecure ? "none" : "lax",
         maxAge: 7*24 * 60 * 60 * 1000,
     };
     const userObject=user.toObject();
@@ -96,10 +97,11 @@ export const login = asyncHandler(async (req, res) => {
 })
 
 export const logout = asyncHandler(async (req, res) => {
+    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.clearCookie("token", {
         httpOnly: true,
-        secure: true,
-        sameSite: "none"
+        secure: isSecure,
+        sameSite: isSecure ? "none" : "lax"
     });
     res.status(200).json({
         success:true,
@@ -138,10 +140,11 @@ export const googleAuthenticate = asyncHandler(async (req, res) => {
     const token=jwt.sign({id:user._id},config.JWT_SECRET,{expiresIn:config.JWT_EXPIRES_IN});
 
 
+    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     const options = {
         httpOnly: true,
-        secure: true,
-        sameSite: "none",
+        secure: isSecure,
+        sameSite: isSecure ? "none" : "lax",
         maxAge: 7*24 * 60 * 60 * 1000,
     };
 

@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 let api = axios.create({
-    baseURL: "/api/cart",
+    baseURL: "https://flexdrip.onrender.com/api/cart",
     withCredentials: true,
     headers: {
         "Content-Type": "application/json"

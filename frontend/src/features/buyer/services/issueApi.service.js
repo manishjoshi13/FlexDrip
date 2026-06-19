@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: "/api/issue",
+    baseURL: "https://flexdrip.onrender.com/api/issue",
     withCredentials: true,
     headers: {
         "Content-Type": "application/json"

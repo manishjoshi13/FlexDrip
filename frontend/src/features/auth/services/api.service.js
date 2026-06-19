@@ -1,7 +1,7 @@
 import axios from "axios";
 
 let api = axios.create({
-    baseURL: "/api",
+    baseURL: "https://flexdrip.onrender.com/api",
     withCredentials: true
 });
 

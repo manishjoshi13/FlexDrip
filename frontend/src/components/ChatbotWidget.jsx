@@ -48,7 +48,7 @@ const ChatbotWidget = () => {
                 content: msg.content
             }));
 
-            const response = await axios.post('/api/chatbot/message', {
+            const response = await axios.post('https://flexdrip.onrender.com/api/chatbot/message', {
                 message: query,
                 history
             }, {

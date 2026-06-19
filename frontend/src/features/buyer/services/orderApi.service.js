@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: "/api/order",
+    baseURL: "https://flexdrip.onrender.com/api/order",
     withCredentials: true,
     headers: {
         "Content-Type": "application/json"

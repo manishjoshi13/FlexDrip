@@ -42,7 +42,7 @@ const AuthLayout = ({
 
                 {/* Google Sign In */}
                 <a
-                    href="http://localhost:5173/api/auth/google"
+                    href="https://flexdrip.onrender.com/api/auth/google"
                     className="w-full flex items-center justify-center gap-3 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all active:scale-[0.98] mb-6 shadow-sm"
                 >
                     <svg className="w-5 h-5" viewBox="0 0 24 24">

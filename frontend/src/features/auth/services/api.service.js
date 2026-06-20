@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 let api = axios.create({
-    baseURL: "https://flexdrip.onrender.com/api",
+    baseURL: `${BACKEND_URL}/api`,
     withCredentials: true
 });
 

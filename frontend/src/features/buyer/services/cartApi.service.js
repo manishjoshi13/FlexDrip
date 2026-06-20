@@ -1,7 +1,9 @@
 import axios from 'axios'
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 let api = axios.create({
-    baseURL: "https://flexdrip.onrender.com/api/cart",
+    baseURL: `${BACKEND_URL}/api/cart`,
     withCredentials: true,
     headers: {
         "Content-Type": "application/json"

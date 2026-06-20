@@ -3,7 +3,8 @@ import { register,login,logout,getMe,googleAuthenticate,updateProfile, verifyReg
 import { validateRegister,validateLogin } from "../validator/auth.validator.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 import passport from "passport";
-
+import {config} from "../config/config.js"
+let redirectUrl=`${config.FRONTEND_URL}/login`
 
 const router = Router();
 
@@ -28,7 +29,7 @@ router.get('/google',
 );
 
 router.get('/google/callback',
-  passport.authenticate('google', { session: false,failureRedirect:"https://flexdrip.vercel.app/login" }),googleAuthenticate
+  passport.authenticate('google', { session: false,failureRedirect:redirectUrl }),googleAuthenticate
 );
 
 

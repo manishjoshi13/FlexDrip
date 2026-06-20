@@ -99,7 +99,7 @@ export const useAuth = () => {
             dispatch(setLoading(false));
         }
     }
-   
+
 
     const forgotPassword = async (email) => {
         dispatch(setError(null));

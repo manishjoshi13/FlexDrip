@@ -3,6 +3,8 @@ import axios from 'axios';
 import { MessageSquare, X, Send, RefreshCw, Sparkles, User, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../features/auth/hooks/useAuth';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 const QUICK_PROMPTS = [
     { label: "Check Active Orders", text: "Show my active orders" },
     { label: "Order Not Received", text: "I didn't receive my order" },
@@ -48,7 +50,7 @@ const ChatbotWidget = () => {
                 content: msg.content
             }));
 
-            const response = await axios.post('https://flexdrip.onrender.com/api/chatbot/message', {
+            const response = await axios.post(`${BACKEND_URL}/api/chatbot/message`, {
                 message: query,
                 history
             }, {

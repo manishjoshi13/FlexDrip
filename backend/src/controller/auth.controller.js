@@ -1,4 +1,4 @@
-import {User} from "../models/user.model.js";
+import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utils/asyncWrapper.js";
 import jwt from "jsonwebtoken";
 import { config } from "../config/config.js";
@@ -12,13 +12,17 @@ import { getAccountRegisteredHTML } from "../html/accountRegistered.js";
 import { getSellerWelcomeHTML } from "../html/sellerWelcome.js";
 import { getChangePasswordHTML } from "../html/changePassword.js";
 
+const getFrontendUrl = () => {
+    return config.FRONTEND_URL;
+};
+
 export const register = asyncHandler(async (req, res) => {
     const { fullName, email, password, phone, role } = req.body;
 
     if (!fullName || !email || !password || !phone || !role) {
         throw new AppError("All fields are required", 400);
     }
-    
+
     const checkUser = await User.findOne({ email });
     if (checkUser) {
         throw new AppError("User with this email or phone already exists", 400);
@@ -34,15 +38,15 @@ export const register = asyncHandler(async (req, res) => {
     );
 
     // Send verification email
-    const frontendUrl = config.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = getFrontendUrl();
     const emailHtml = getVerifyAccountHTML(fullName, verificationToken, frontendUrl);
-    
+
     await sendEmail(
-        email, 
-        "Verify Your FlexDrip Account", 
-        "Verify your account by clicking the link.", 
+        email,
+        "Verify Your FlexDrip Account",
+        "Verify your account by clicking the link.",
         emailHtml
-    );
+    ).catch(err => console.error("Verify email error:", err));
 
     res.status(200).json({
         success: true,
@@ -52,48 +56,48 @@ export const register = asyncHandler(async (req, res) => {
 
 
 export const login = asyncHandler(async (req, res) => {
-    const {email,password,role} = req.body;
+    const { email, password, role } = req.body;
 
-    if(!email || !password || !role){
-        throw new AppError("All fields are required",400);
+    if (!email || !password || !role) {
+        throw new AppError("All fields are required", 400);
     }
 
-    const user = await User.findOne({email,role}).select("+password +googleLogin");
-    if(!user){
-        throw new AppError("User not found",404);
+    const user = await User.findOne({ email, role }).select("+password +googleLogin");
+    if (!user) {
+        throw new AppError("User not found", 404);
     }
 
-    if(user.googleLogin){
-       
-        throw new AppError("User is registered with google, please login with google",400);
+    if (user.googleLogin) {
+
+        throw new AppError("User is registered with google, please login with google", 400);
     }
-    const isPasswordValid = await bcrypt.compare(password,user.password);
-    if(!isPasswordValid){
-        throw new AppError("Invalid password",401);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+        throw new AppError("Invalid password", 401);
     }
 
-    const token=jwt.sign({id:user._id},config.JWT_SECRET,{expiresIn:config.JWT_EXPIRES_IN});
+    const token = jwt.sign({ id: user._id }, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN });
 
-        // cookie
+    // cookie
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     const options = {
         httpOnly: true,
         secure: isSecure,
         sameSite: isSecure ? "none" : "lax",
-        maxAge: 7*24 * 60 * 60 * 1000,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
     };
-    const userObject=user.toObject();
+    const userObject = user.toObject();
     delete userObject.password
 
-    res.cookie("token",token, options);
-   
+    res.cookie("token", token, options);
+
 
     res.status(200).json({
-        success:true,
-        message:"User logged in successfully",
-        user:userObject
+        success: true,
+        message: "User logged in successfully",
+        user: userObject
     })
-  
+
 })
 
 export const logout = asyncHandler(async (req, res) => {
@@ -104,40 +108,40 @@ export const logout = asyncHandler(async (req, res) => {
         sameSite: isSecure ? "none" : "lax"
     });
     res.status(200).json({
-        success:true,
-        message:"User logged out successfully"
+        success: true,
+        message: "User logged out successfully"
     })
-  
+
 })
 
 export const getMe = asyncHandler(async (req, res) => {
-    
+
     res.status(200).json({
-        success:true,
-        user:req.user
+        success: true,
+        user: req.user
     })
-  
+
 })
 
 
 
 export const googleAuthenticate = asyncHandler(async (req, res) => {
-    const frontendUrl = config.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = getFrontendUrl();
     let user = await User.findOne({ email: req.user.emails[0].value }).select("+googleLogin");
     if (user && !user.googleLogin) {
         return res.redirect(`${frontendUrl}/login?error=not registred with google`);
     }
-    if(!user){
-        user=await User.create({
-            fullName:req.user.displayName,
-            email:req.user.emails[0].value,
-            role:"buyer",
-            googleLogin:true,
-            
+    if (!user) {
+        user = await User.create({
+            fullName: req.user.displayName,
+            email: req.user.emails[0].value,
+            role: "buyer",
+            googleLogin: true,
+
         })
     }
     console.log(user)
-    const token=jwt.sign({id:user._id},config.JWT_SECRET,{expiresIn:config.JWT_EXPIRES_IN});
+    const token = jwt.sign({ id: user._id }, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN });
 
 
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
@@ -145,13 +149,13 @@ export const googleAuthenticate = asyncHandler(async (req, res) => {
         httpOnly: true,
         secure: isSecure,
         sameSite: isSecure ? "none" : "lax",
-        maxAge: 7*24 * 60 * 60 * 1000,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
     };
 
-    res.cookie("token",token, options);
+    res.cookie("token", token, options);
 
     res.redirect(frontendUrl)
-  
+
 })
 
 export const updateProfile = asyncHandler(async (req, res) => {
@@ -241,7 +245,7 @@ export const verifyRegistration = asyncHandler(async (req, res) => {
         }
 
         // Send welcome email
-        const frontendUrl = config.FRONTEND_URL || 'http://localhost:5173';
+        const frontendUrl = getFrontendUrl();
         if (user.role === 'seller') {
             const welcomeHtml = getSellerWelcomeHTML(user.fullName, frontendUrl);
             await sendEmail(
@@ -290,16 +294,16 @@ export const forgotPassword = asyncHandler(async (req, res) => {
         { expiresIn: '15m' }
     );
 
-    const frontendUrl = config.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = getFrontendUrl();
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
     const emailHtml = getChangePasswordHTML(user.fullName, resetUrl);
 
-    await sendEmail(
+    sendEmail(
         user.email,
         "Reset Your FlexDrip Password",
         `Reset your password using this link: ${resetUrl}`,
         emailHtml
-    );
+    ).catch(err => console.error("Reset password email error:", err));
 
     res.status(200).json({
         success: true,
@@ -325,7 +329,7 @@ export const resetPassword = asyncHandler(async (req, res) => {
         const userId = decoded.id;
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        
+
         const user = await User.findById(userId);
         if (!user) {
             throw new AppError("User not found or invalid token", 404);
